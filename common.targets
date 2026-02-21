@@ -1,0 +1,105 @@
+<Project>
+
+    <PropertyGroup>
+        <DebuggerMode Condition="'$(DebuggerMode)'==''">false</DebuggerMode>
+        <YoutubeLink>https://www.youtube.com/Klyte45</YoutubeLink>
+        <KofiLink>https://ko-fi.com/klyte45</KofiLink>
+        <DebugSymbols Condition="'$(Configuration)'=='Release'">False</DebugSymbols>
+        <DebugSymbols Condition="'$(Configuration)'=='Debug'">True</DebugSymbols>
+        <DebugType Condition="'$(Configuration)'=='Debug'">portable</DebugType>
+        <DebuggerMode Condition="'$(Configuration)'=='Debug'">true</DebuggerMode>
+        <DeployDir Condition="'$(WorkshopId)'==''">$(SolutionDir)..\_appdataMods\$(SolutionName)\</DeployDir>
+        <DeployDir Condition="'$(WorkshopId)'!=''">$(SolutionDir)..\_wsMods\$(WorkshopId)\</DeployDir>
+        <ManagedDllDir>$(SolutionDir)../_managed</ManagedDllDir>
+        <_BuildDir  Condition="'$(_BuildDir)' == ''">$(SolutionDir)_Build</_BuildDir>
+    </PropertyGroup>
+  
+    <ItemGroup>
+        <Reference Include="Assembly-CSharp">
+            <HintPath>$(ManagedDllDir)\Assembly-CSharp.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="ColossalManaged">
+            <HintPath>$(ManagedDllDir)\ColossalManaged.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="ICities">
+            <HintPath>$(ManagedDllDir)\ICities.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="System.Xml.Linq">
+            <HintPath>$(ManagedDllDir)\System.Xml.Linq.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="System.Data.DataSetExtensions">
+            <HintPath>$(ManagedDllDir)\System.Data.DataSetExtensions.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="System.Data">
+            <HintPath>$(ManagedDllDir)\System.Data.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="System.Xml">
+            <HintPath>$(ManagedDllDir)\System.Xml.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="System">
+            <HintPath>$(ManagedDllDir)\System.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="System.Core">
+            <HintPath>$(ManagedDllDir)\System.Core.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="UnityEngine">
+            <HintPath>$(ManagedDllDir)\UnityEngine.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="0Harmony">
+            <HintPath>$(_BuildDir)\libs\0Harmony.dll</HintPath>
+        </Reference>
+        <Reference Include="UnifiedUILib">
+            <HintPath>$(_BuildDir)\libs\UnifiedUILib.dll</HintPath>
+            <Aliases>UUI</Aliases>
+        </Reference>
+    </ItemGroup>
+  
+    <ItemGroup>
+        <PackageReference Include="ilmerge" Version="3.0.40" />
+    </ItemGroup>
+  
+    <Target Name="DeployWIP" AfterTargets="AfterBuild">
+        <ItemGroup>
+            <FilesToDeploy Include="$(OutDir)\**\*.*" />
+            <FilesToDeploy Include="$(SolutionDir)\PreviewImage.png" />
+        </ItemGroup>
+        <Message Text="Copy output to deploy directory $(DeployDir)" Importance="high" />
+        <RemoveDir Directories="$(DeployDir)" />
+        <Copy SourceFiles="@(FilesToDeploy)" DestinationFiles="@(FilesToDeploy->'$(DeployDir)\%(RecursiveDir)%(Filename)%(Extension)')" />
+    </Target>
+    <Target Name="MergeDll" AfterTargets="AfterBuild">
+        <Exec Command="del &quot;$(DeployDir)\*.pdb&quot;" />
+        <ItemGroup>
+            <ModDlls Include="$(DeployDir)/*.dll" Exclude="$(DeployDir)/UnifiedUILib.dll"/>
+        </ItemGroup>
+        <Message Text="RUN MERGE DLL" Importance="high"/>
+    </Target>
+    <Target Name="RunMergeDll" AfterTargets="AfterBuild" Condition="'@(ModDlls->Count())' &gt; 1" DependsOnTargets="MergeDll">
+        <ItemGroup>
+            <ModDlls2 Include="$(DeployDir)/*.dll" Exclude="$(DeployDir)/$(TargetName).dll;$(DeployDir)/UnifiedUILib.dll" />
+        </ItemGroup>
+        <Exec Command="$(ILMergeConsolePath)  /lib:&quot;$(ManagedDllDir)&quot; /targetplatform:v2,&quot;$(ManagedDllDir)&quot; /out:&quot;$(DeployDir)/$(SolutionName).dll&quot; &quot;$(DeployDir)/$(TargetName).dll&quot; @(ModDlls2->'&quot;%(FullPath)&quot;', ' ')" />
+        <ItemGroup>
+            <DllsToDelete Include="$(DeployDir)/*.dll" Exclude="$(DeployDir)/$(SolutionName).dll;$(DeployDir)/UnifiedUILib.dll" />
+        </ItemGroup>
+        <Exec Command="del &quot;$(DeployDir)\*.pdb&quot;" />
+        <Exec Command="del  @(DllsToDelete->'&quot;%(FullPath)&quot;', ' ')" />
+    </Target>
+    <Target Name="ModifyEmbeddedResourceNames" BeforeTargets="CreateManifestResourceNames">
+        <ItemGroup>
+            <EmbeddedResource>
+                <LogicalName Condition="$([System.String]::Copy('%(EmbeddedResource.Identity)').Contains('Kwytto'))">$([System.String]::Copy('%(EmbeddedResource.Identity)').Replace('\', '.').Replace('.resx', '.resources'))</LogicalName>
+            </EmbeddedResource>
+        </ItemGroup>
+    </Target>
+</Project>
